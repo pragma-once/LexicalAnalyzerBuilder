@@ -1,0 +1,321 @@
+# python 2 lexical analyzer - python lexical analysis ref = https://docs.python.org/2/reference/lexical_analysis.html #
+# every parts that couldn't be implemented can be implemented using syntax analyzer, the lexical analyzer was defined as DFA #
+
+start, '#' => comment
+middle, '#' => comment -ignore -return('NEWLINE')
+
+comment, '\n' => start   -ignore
+comment, else => comment -ignore
+
+start, { '\\\n' , '\n' } => start -ignore
+
+middle, '\\\n' => middle -ignore
+middle, '\n'   => start  -ignore -return('NEWLINE')
+
+# 2.1.6: cannot implement the implicit line joining, because this is a DFA without a stack #
+
+space = { ' ', '\t' }
+
+start, space => start # doesn't ignore the queue to return it as 'INDENTATION' later #
+
+# 2.1.8: cannot implement inconsistent indentation error #
+# 2.1.8: cannot implement 'INDENT' and 'DEDENT' tokens, instead, implemented 'INDENTATION' token with a value of tabs and spaces string #
+
+middle, space => middle -ignore
+
+letter = { 'a', ... , 'z', 'A', ... , 'Z' }
+digit  = { '0', ... , '9' }
+
+idstart  = { letter, '_' }
+idmiddle = { letter, digit, '_' }
+
+#
+identifiers:
+and       del       from      not       while
+as        elif      global    or        with
+assert    else      if        pass      yield
+break     except    import    print
+class     exec      in        raise
+continue  finally   is        return
+def       for       lambda    try
+#
+keyword = { 'and', 'as', 'assert', 'break',
+            'class', 'continue', 'def', 'del',
+            'elif', 'else', 'except', 'exec',
+            'finally', 'for', 'from', 'global',
+            'if', 'import', 'in', 'is',
+            'lambda', 'not', 'or', 'pass',
+            'print', 'raise', 'return', 'try',
+            'while', 'with', 'yield' }
+
+stringprefix = { "r", "u", "ur", "R",
+                 "U", "UR", "Ur", "uR",
+                 "b", "B", "br", "Br",
+                 "bR", "BR" }
+
+start,  keyword => keyword -return(last, 'INDENTATION')
+middle, keyword => keyword
+
+start,  stringprefix => stringprefix -return(last, 'INDENTATION')
+middle, stringprefix => stringprefix
+
+start,  idstart => identifier -return(last, 'INDENTATION')
+middle, idstart => identifier
+
+identifier, idmiddle => identifier
+
+identifier, space  => middle -return(last, 'identifier') -ignore
+identifier, '\\\n' => middle -return(last, 'identifier') -ignore
+identifier, '\n'   => start  -return(last, 'identifier') -ignore -return('NEWLINE')
+
+keyword, idmiddle => identifier
+
+keyword, space  => middle -return(last, 'keyword') -ignore
+keyword, '\\\n' => middle -return(last, 'keyword') -ignore
+keyword, '\n'   => start  -return(last, 'keyword') -ignore -return('NEWLINE')
+
+# 2.3.2: skipping #
+
+stringprefix, "'''"    => longstring1  -return(last, 'stringprefix') -ignore
+stringprefix, '"""'    => longstring2  -return(last, 'stringprefix') -ignore
+stringprefix, "'"      => shortstring1 -return(last, 'stringprefix') -ignore
+stringprefix, '"'      => shortstring2 -return(last, 'stringprefix') -ignore
+stringprefix, idmiddle => identifier
+
+start, "'''"    => longstring1  -return(last, 'INDENTATION') -ignore
+start, '"""'    => longstring2  -return(last, 'INDENTATION') -ignore
+start, "'"      => shortstring1 -return(last, 'INDENTATION') -ignore
+start, '"'      => shortstring2 -return(last, 'INDENTATION') -ignore
+
+middle, "'''"    => longstring1  -ignore
+middle, '"""'    => longstring2  -ignore
+middle, "'"      => shortstring1 -ignore
+middle, '"'      => shortstring2 -ignore
+
+stringprefix, space  => middle -return(last, 'identifier') -ignore
+stringprefix, '\\\n' => middle -return(last, 'identifier') -ignore
+stringprefix, '\n'   => start  -return(last, 'identifier') -ignore -return('NEWLINE')
+
+shortstring1, "'"  => middle -return(last, 'shortstring') -ignore
+shortstring1, '\\' => ss1tmp
+ss1tmp,       else => shortstring1
+shortstring1, '\n' => shortstring1 -error('newline is not allowed in a short string')
+shortstring1, else => shortstring1
+
+shortstring2, '"'  => middle -return(last, 'shortstring') -ignore
+shortstring2, '\\' => ss2tmp
+ss2tmp,       else => shortstring2
+shortstring2, '\n' => shortstring2 -error('newline is not allowed in a short string')
+shortstring2, else => shortstring2
+
+longstring1, "'''"  => middle -return(last, 'longstring') -ignore
+longstring1, '\\' => ls1tmp
+ls1tmp,      else => longstring1
+longstring1, else => longstring1
+
+longstring2, '"""'  => middle -return(last, 'longstring') -ignore
+longstring2, '\\' => ls2tmp
+ls2tmp,      else => longstring2
+longstring2, else => longstring2
+
+nonzerodigit = { '1', ... , '9' }
+octdigit     = { '0', ... , '7' }
+bindigit     = { '0', '1' }
+hexdigit     = { digit, 'a', ... , 'f', 'A', ... , 'F' }
+l            = { 'l', 'L' }
+
+start, { '0o', '0O' } => octintegerstart -return(last, 'INDENTATION')
+start, { '0x', '0X' } => hexintegerstart -return(last, 'INDENTATION')
+start, { '0b', '0B' } => binintegerstart -return(last, 'INDENTATION')
+start, '0'            => zerodigit       -return(last, 'INDENTATION')
+start, nonzerodigit   => decimalinteger  -return(last, 'INDENTATION')
+start, '.'            => dot             -return(last, 'INDENTATION')
+
+middle, { '0o', '0O' } => octintegerstart
+middle, { '0x', '0X' } => hexintegerstart
+middle, { '0b', '0B' } => binintegerstart
+middle, '0'            => zerodigit
+middle, nonzerodigit   => decimalinteger
+middle, '.'            => dot
+
+decimalinteger, digit  => decimalinteger
+decimalinteger, l      => middle -return(last, 'decimallonginteger') -ignore
+decimalinteger, space  => middle -return(last, 'decimalinteger')     -ignore
+decimalinteger, '\\\n' => middle -return(last, 'decimalinteger')     -ignore
+decimalinteger, '\n'   => start  -return(last, 'decimalinteger')     -ignore -return('NEWLINE')
+
+octintegerstart, octdigit => octinteger
+hexintegerstart, hexdigit => hexinteger
+binintegerstart, bindigit => bininteger
+
+octinteger, octdigit => octinteger
+octinteger, l        => middle -return(last, 'octlonginteger') -ignore
+octinteger, space    => middle -return(last, 'octinteger')     -ignore
+octinteger, '\\\n'   => middle -return(last, 'octinteger')     -ignore
+octinteger, '\n'     => start  -return(last, 'octinteger')     -ignore -return('NEWLINE')
+
+hexinteger, hexdigit => hexinteger
+hexinteger, l        => middle -return(last, 'hexlonginteger') -ignore
+hexinteger, space    => middle -return(last, 'hexinteger')     -ignore
+hexinteger, '\\\n'   => middle -return(last, 'hexinteger')     -ignore
+hexinteger, '\n'     => start  -return(last, 'hexinteger')     -ignore -return('NEWLINE')
+
+bininteger, bindigit => bininteger
+bininteger, l        => middle -return(last, 'longbininteger') -ignore
+bininteger, space    => middle -return(last, 'bininteger')     -ignore
+bininteger, '\\\n'   => middle -return(last, 'bininteger')     -ignore
+bininteger, '\n'     => start  -return(last, 'bininteger')     -ignore -return('NEWLINE')
+
+exponentstart = { 'e+', 'e-', 'e', 'E+', 'E-', 'E' }
+
+zerodigit, octdigit      => zerooct
+zerodigit, digit         => zeronum
+zerodigit, '.'           => fraction
+zerodigit, exponentstart => exponent
+zerodigit, l             => middle -return(last, 'decimallonginteger') -ignore
+zerodigit, space         => middle -return(last, 'decimalinteger')     -ignore
+zerodigit, '\\\n'        => middle -return(last, 'decimalinteger')     -ignore
+zerodigit, '\n'          => start  -return(last, 'decimalinteger')     -ignore -return('NEWLINE')
+
+zerooct, octdigit      => zerooct
+zerooct, digit         => zerodec
+zerooct, '.'           => fraction
+zerooct, exponentstart => exponent
+zerooct, l             => middle -return(last, 'octlonginteger') -ignore
+zerooct, space         => middle -return(last, 'octinteger')     -ignore
+zerooct, '\\\n'        => middle -return(last, 'octinteger')     -ignore
+zerooct, '\n'          => start  -return(last, 'octinteger')     -ignore -return('NEWLINE')
+
+zerodec, digit => zerodec
+zerodec, '.' => fraction
+zerodec, exponentstart => exponent
+
+dot, digit   => fraction
+dot, idstart => identifier -return(last, 'delimiter')
+dot, space   => middle     -return(last, 'delimiter') -ignore
+dot, '\\\n'  => middle     -return(last, 'delimiter') -ignore
+dot, '\n'    => start      -return(last, 'delimiter') -ignore -return('NEWLINE')
+
+decimalinteger, '.' => fraction
+decimalinteger, exponentstart => exponent
+
+fraction, digit         => fraction
+fraction, exponentstart => exponent
+fraction, space         => middle -return(last, 'float') -ignore
+fraction, '\\\n'        => middle -return(last, 'float') -ignore
+fraction, '\n'          => start  -return(last, 'float') -ignore -return('NEWLINE')
+
+exponent, digit  => exponent
+exponent, space  => middle -return(last, 'exponentfloat') -ignore
+exponent, '\\\n' => middle -return(last, 'exponentfloat') -ignore
+exponent, '\n'   => start  -return(last, 'exponentfloat') -ignore -return('NEWLINE')
+
+j = { 'j', 'J' }
+
+zerodigit, j      => middle -return(last, 'integerimagnumber')       -ignore
+zerooct, j        => middle -return(last, 'integerimagnumber')       -ignore
+zerodec, j        => middle -return(last, 'integerimagnumber')       -ignore
+decimalinteger, j => middle -return(last, 'integerimagnumber')       -ignore
+fraction, j       => middle -return(last, 'floatimagnumber')         -ignore
+exponent, j       => middle -return(last, 'exponentfloatimagnumber') -ignore
+
+#
++       -       *       **      /       //      %
+<<      >>      &       |       ^       ~
+<       >       <=      >=      ==      !=      <>
+#
+operator = { '+', '-',
+             '**', '*',
+             '//', '/',
+             '%',
+             '<<', '>>',
+             '&', '|', '^', '~',
+             '<=', '>=', '<', '>',
+             '==', '!=', '<>' }
+
+#
+(       )       [       ]       {       }      @
+,       :       .       `       =       ;
++=      -=      *=      /=      //=     %=
+&=      |=      ^=      >>=     <<=     **=
+#
+delimiter = { '(', ')', '[', ']', '{', '}', '@',
+              ',', ':', '.', '`', '=', ';',
+              '+=', '-=', '*=', '//=', '/=', '%=',
+              '&=', '|=', '^=', '>>=', '<<=', '**=' }
+
+prioroperator = { '==' }
+
+start,           prioroperator => middle -return(last, 'INDENTATION')    -return('operator')
+middle,          prioroperator => middle                                 -return('operator')
+identifier,      prioroperator => middle -return(last, 'identifier')     -return('operator')
+keyword,         prioroperator => middle -return(last, 'keyword')        -return('operator')
+stringprefix,    prioroperator => middle -return(last, 'identifier')     -return('operator')
+decimalinteger,  prioroperator => middle -return(last, 'decimalinteger') -return('operator')
+octinteger,      prioroperator => middle -return(last, 'octinteger')     -return('operator')
+hexinteger,      prioroperator => middle -return(last, 'hexinteger')     -return('operator')
+bininteger,      prioroperator => middle -return(last, 'bininteger')     -return('operator')
+zerodigit,       prioroperator => middle -return(last, 'decimalinteger') -return('operator')
+zerooct,         prioroperator => middle -return(last, 'octinteger')     -return('operator')
+dot,             prioroperator => middle -return(last, 'delimiter')      -return('operator')
+fraction,        prioroperator => middle -return(last, 'float')          -return('operator')
+exponent,        prioroperator => middle -return(last, 'exponentfloat')  -return('operator')
+
+start,           delimiter => middle -return(last, 'INDENTATION')    -return('operator')
+middle,          delimiter => middle                                 -return('operator')
+identifier,      delimiter => middle -return(last, 'identifier')     -return('delimiter')
+keyword,         delimiter => middle -return(last, 'keyword')        -return('delimiter')
+stringprefix,    delimiter => middle -return(last, 'identifier')     -return('delimiter')
+decimalinteger,  delimiter => middle -return(last, 'decimalinteger') -return('delimiter')
+octinteger,      delimiter => middle -return(last, 'octinteger')     -return('delimiter')
+hexinteger,      delimiter => middle -return(last, 'hexinteger')     -return('delimiter')
+bininteger,      delimiter => middle -return(last, 'bininteger')     -return('delimiter')
+zerodigit,       delimiter => middle -return(last, 'decimalinteger') -return('delimiter')
+zerooct,         delimiter => middle -return(last, 'octinteger')     -return('delimiter')
+dot,             delimiter => middle -return(last, 'delimiter')      -return('delimiter')
+fraction,        delimiter => middle -return(last, 'float')          -return('delimiter')
+exponent,        delimiter => middle -return(last, 'exponentfloat')  -return('delimiter')
+
+start,           operator => middle -return(last, 'INDENTATION')    -return('operator')
+middle,          operator => middle                                 -return('operator')
+identifier,      operator => middle -return(last, 'identifier')     -return('operator')
+keyword,         operator => middle -return(last, 'keyword')        -return('operator')
+stringprefix,    operator => middle -return(last, 'identifier')     -return('operator')
+decimalinteger,  operator => middle -return(last, 'decimalinteger') -return('operator')
+octinteger,      operator => middle -return(last, 'octinteger')     -return('operator')
+hexinteger,      operator => middle -return(last, 'hexinteger')     -return('operator')
+bininteger,      operator => middle -return(last, 'bininteger')     -return('operator')
+zerodigit,       operator => middle -return(last, 'decimalinteger') -return('operator')
+zerooct,         operator => middle -return(last, 'octinteger')     -return('operator')
+dot,             operator => middle -return(last, 'delimiter')      -return('operator')
+fraction,        operator => middle -return(last, 'float')          -return('operator')
+exponent,        operator => middle -return(last, 'exponentfloat')  -return('operator')
+
+identifier,      $ => middle -return(last, 'identifier')
+keyword,         $ => middle -return(last, 'keyword')
+stringprefix,    $ => middle -return(last, 'identifier')
+decimalinteger,  $ => middle -return(last, 'decimalinteger')
+octinteger,      $ => middle -return(last, 'octinteger')
+hexinteger,      $ => middle -return(last, 'hexinteger')
+bininteger,      $ => middle -return(last, 'bininteger')
+zerodigit,       $ => middle -return(last, 'decimalinteger')
+zerooct,         $ => middle -return(last, 'octinteger')
+dot,             $ => middle -return(last, 'delimiter')
+fraction,        $ => middle -return(last, 'float')
+exponent,        $ => middle -return(last, 'exponentfloat')
+
+final(start, middle)
+
+
+
+
+
+
+
+
+
+
+
+
+
+

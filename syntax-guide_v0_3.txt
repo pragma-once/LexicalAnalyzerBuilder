@@ -1,0 +1,322 @@
+- Sets:
+
+
+
+	Ranges:
+
+
+
+	A = { 'a', ... , 'z' }
+
+	B = { 'A', ... , 'Z' }
+
+	C = { '0', ... , '9' }
+
+	In a range, min and max should be characters, not strings.
+
+	The left character's value must be less than the one at the right side.
+
+
+
+	Elements:
+
+
+
+	Can be strings or other sets.
+
+
+
+	D = { A, B, C, D, '_' }
+
+	E = { 'hello', 'hi', 'hey' }
+
+
+
+	Elements and ranges can be combined in a single set.
+
+
+
+	F = { A, '_', '1', ... , '9', 'F', ... , 'H' }
+
+
+
+- Strings:
+
+
+
+	Strings are written between '' or ""
+
+
+	You can use '\' in some cases, '\'s are ignored:
+
+
+
+		'\n': next line
+
+		'\t': tab
+
+		'\\': a single \ character
+
+		'\'': a ' character
+
+		"\"": a " character
+
+
+
+	A string can be written in multiple lines:
+
+
+
+		"Hey,
+
+		this is a
+
+		string!"
+
+- Transitions:
+
+
+
+	StateName, input => StateName [--function]*
+
+	Where input can be:
+
+
+		- a string,
+
+		- or a set name that is already defined.
+
+
+		- a set of strings defined inside transition,
+		- a $ that means the end of the string.
+
+	examples:
+
+
+
+		A, ' ' => B --ignore
+
+
+
+		A, { 'i', 'j' } => B
+
+
+
+		operator = { '=' }
+
+		num = { '0', ... , '9' }
+
+		B, num => B
+
+		B, operator => A --return(-1, 'id') --return(0, 'operator')
+
+
+
+		ID, $ => S0 --return(-1, 'id')
+
+	Note:	The order of defining transitions matters! First ones will be checked first.
+
+	Note:	There can be no destination state, but instead some functions.
+		In this case, the machine will stop on that transition (won't check the rest of the string) and does the function(s).
+
+		example: A, '$' => -error("'$' is not allowed")
+
+		note that $ and '$' are not the same thing.
+
+	To define a same transition from multiple states:
+
+		(S1, S2, ...), input => ...
+
+	example:
+
+		(integer, float), $ => S0 -return('num')
+
+- Functions:
+
+	Each transition can contain functions. Functions start with one or more '-'.
+
+	This is the list of all functions you can use:
+
+
+
+	-return(offset, typename)
+
+
+
+		Returns and clears from the start of queue to the (last - offset) character.
+
+		offset: Can be a number, or the 'last' word, meaning that this transition should return the letters before the last accepted string.
+			the last accepted string is the accepted string in the current transition that can have any non-zero length.
+			A number means that this transition should return the letters in the queue until the offset.
+			for example, the offset 2 or -2 returns remaining accepted letters before last two letters, and remains those 2 for the next return.
+		typename: the returned value's type.
+
+
+		example: ID, ' ' => S0 --return(-1, "id")
+
+
+		example: ID, operator => S0 --return(last, 'id') --return(0, 'operator')
+
+	-return(typename)
+
+
+
+		Returns and clears from the queue.
+
+		typename: the returned value's type.
+
+
+		example: S0, '==' => S0 --return('operator')
+
+
+
+	-return(offset) / -clear(offset) / -ignore(offset)
+
+
+
+		Clears/ignores from the start of queue to the (last - offset) character.
+		offset: Can be a number, or the 'last' word, meaning that this transition should clear the letters before the last accepted string.
+			the last accepted string is the accepted string in the current transition that can have any non-zero length.
+			A number means that this transition should clear the letters in the queue until it remains that number of last inserted letters.
+
+
+		example: Spaces, letter => L --return(-1)
+
+
+		example: Spaces, operator => L --return(last)
+
+
+
+	-return / --clear / --ignore
+
+
+
+		The short form of --return(0)
+
+
+
+	-error(message)
+
+
+
+		Returns an error in the current position.
+
+		Errors are messages shown to user and should be solved to be able to compile.
+
+
+		example: --error("Ids should start with '$'")
+
+
+
+	-warning(message)
+
+
+
+		Returns a warning in the current position.
+
+		Warnings are messages shown to user, but won't be a problem for the compiler.
+
+
+		example: --warning("Try not to start function names with a lower-case letter")
+
+
+
+	-hint(message)
+
+
+
+		Returns a hint in the current position.
+
+		Hints can be used to make compiling easier.
+
+
+		example: --hint("reserved-keyword")
+
+
+
+	Note:	Each transition can contain more than one return/clear/ignore functions,
+
+		but can only contain any of error, warning and hint functions once.
+
+		Error, warning and hint functions will be overwritten if repeated.
+
+
+
+	Note:	Return functions will be ran in the order you wrote. example:
+
+
+
+			A, ' ' => B --return(-2, word) --return(-1, last char) --ignore
+
+
+
+- Final State:
+
+
+
+	To set a state as final:
+
+
+
+		statename --final
+
+
+
+	Or multiple states at once:
+
+
+
+		final(state1, state2, ...)
+
+
+
+- Comment:
+
+
+
+	Write your comments between 2 # characters. example:
+
+
+
+		# hey it's a comment #
+
+
+		# and ...
+
+		  this is a comment written in
+
+		  multiple lines. #
+
+
+
+- Start State:
+
+	The first defined state will be the start state.
+
+- Behaviour:
+
+	The behaviour of this programmable machine is not exactly like the state machine.
+	Transitions can be repetitive and sets can contain repetitive members.
+
+	First things first:
+
+	Inside each state, first transitions will be compared first.
+
+	example:
+
+		The second transition in this code makes no sense:
+
+			A, 'a' => B ; A, 'ab' => C # the second transition will never happen. #
+
+		But this one does:
+
+			A, 'ab' => B ; A, 'a' => C # 'ab' is checked prior to 'a'. #
+
+	Inside each transition, the first elements in a set will be compared first, after checking the string elements, the ranges in that set will be compared.
+	So ranges are compared last.
+
+	example:
+
+		A, { 'a', 'ab' } => B # the 'ab' string will never be compared. #
+
+		A, { 'ab', 'a' } => B # the 'ab' string is prior to the 'a' character to be accepted. #

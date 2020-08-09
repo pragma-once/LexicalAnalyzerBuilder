@@ -1,0 +1,13 @@
+﻿<UserControl x:Class="LexicalAnalyzer.CustomButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:LexicalAnalyzer"
+             mc:Ignorable="d" 
+             d:DesignHeight="32" d:DesignWidth="64" Loaded="UserControl_Loaded" MouseEnter="UserControl_MouseEnter" MouseLeave="UserControl_MouseLeave" MouseDown="UserControl_MouseDown" MouseUp="UserControl_MouseUp">
+    <Grid x:Name="MainGrid" Background="Gray">
+        <Label x:Name="ButtonLabel" Content="Button" HorizontalAlignment="Center" Margin="0" VerticalAlignment="Center" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Foreground="Gray"/>
+
+    </Grid>
+</UserControl>

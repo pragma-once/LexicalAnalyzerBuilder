@@ -1,0 +1,24 @@
+﻿<UserControl x:Class="LexicalAnalyzer.CodeColorPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:LexicalAnalyzer"
+             mc:Ignorable="d" 
+             d:DesignHeight="96" d:DesignWidth="256" Loaded="UserControl_Loaded">
+    <Grid x:Name="MainGrid" Background="Black">
+        <Grid Height="32" VerticalAlignment="Top">
+            <Label x:Name="StringLabel" Content="String" HorizontalAlignment="Left" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+            <Grid x:Name="StringColorBar" HorizontalAlignment="Right" Height="16" Margin="0,0,8,0" VerticalAlignment="Center" Width="80" MouseMove="StringColorBar_MouseMove" MouseDown="StringColorBar_MouseDown" MouseUp="StringColorBar_MouseUp" MouseLeave="StringColorBar_MouseLeave">
+                <Rectangle x:Name="StringColorIndicator" Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="24" Margin="0,-8" VerticalAlignment="Center" Width="8"/>
+            </Grid>
+        </Grid>
+        <Grid Height="32" VerticalAlignment="Top" Margin="0,32,0,0">
+            <Label x:Name="CommentLabel" Content="Comment" HorizontalAlignment="Left" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+            <Grid x:Name="CommentColorBar" HorizontalAlignment="Right" Height="16" Margin="0,0,8,0" VerticalAlignment="Center" Width="80" MouseDown="CommentColorBar_MouseDown" MouseMove="CommentColorBar_MouseMove" MouseUp="CommentColorBar_MouseUp" MouseLeave="CommentColorBar_MouseLeave">
+                <Rectangle x:Name="CommentColorIndicator" Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="24" Margin="0,-8" VerticalAlignment="Center" Width="8"/>
+            </Grid>
+        </Grid>
+        <local:CustomButton x:Name="resetButton" Margin="0" VerticalAlignment="Bottom" Foreground="White" HorizontalAlignment="Center" Width="64" Height="32" Text="Reset"/>
+    </Grid>
+</UserControl>

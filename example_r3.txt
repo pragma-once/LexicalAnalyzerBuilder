@@ -1,0 +1,78 @@
+# revision 3 #
+
+S0, { 'A', 'a' } => ProgramA -ignore
+S0, { 'B', 'b' } => ProgramB -ignore
+S0, { 'C', 'c' } => ProgramC -ignore
+S0, { 'D', 'd' } => ProgramD -ignore
+S0, else => -error('The string should be started with one of the letters, a, b, c, or d to know what program to pass the rest of the string to.')
+
+# -------- Example A -------- #
+
+letter = { 'a', ... , 'z', 'A', ... , 'Z' }
+digit = { '0', ... , '9' }
+
+ProgramA, else => ProgramA -ignore
+ProgramA, letter => word
+word, letter => word
+word, digit => number -return(1, 'word')
+word, else => ProgramA -return(-1, 'word') -ignore
+number, digit => number
+number, letter => word -return(01, 'number')
+number, else => ProgramA -return(last, 'number') -ignore
+ProgramA, digit => number
+
+final(ProgramA)
+
+word, $ => ProgramA -return(-1, 'word')
+number, $ => ProgramA -return(last, 'number')
+
+# -------- Example B -------- #
+
+ignore = { ' ', '\t', '\n' }
+
+ProgramB - final
+
+ProgramB, ignore => ProgramB -return
+ProgramB, { letter, '_' } => id
+ProgramB, { '+', '-', digit } => num1
+ProgramB, '"' => string -ignore
+ProgramB, '/*' => comment -ignore
+
+id, { letter, '_' , digit } => id
+id, ignore => ProgramB -return(last, 'id') -ignore
+id, $ => ProgramB -return('id')
+
+num1, digit => num1
+num1, ignore => ProgramB -return(last, 'number') -ignore
+num1, $ => ProgramB -return('number')
+num1, '.' => num2
+
+num2, digit => num3
+
+num3, digit => num3
+num3, ignore => ProgramB -return(last, 'number') -ignore
+num3, $ => ProgramB -return('number')
+
+string, '"' => ProgramB -return(last, 'string') -ignore
+string, else => string
+
+comment, '*/' => ProgramB -return(last, 'comment') -ignore
+comment, else => comment
+
+# -------- Example C -------- #
+
+ProgramC, '\n' => ProgramC -return(-1, 'statement') -return
+ProgramC, else => ProgramC
+ProgramC, $ => -return('statement')
+ProgramC -final
+
+# -------- Example D -------- #
+
+lower = { 'a', ... , 'z' }
+upper = { 'A', ... , 'Z' }
+
+ProgramD, lower => ProgramD -return('char')
+ProgramD, upper => ProgramD -return('char') -hint('upper-case') -warning('Upper-case letters are not recommended!')
+ProgramD, digit => ProgramD -error('digits are not allowed!') -return
+ProgramD, else => ProgramD -warning('ignored character.') -return
+ProgramD, $ => -hint('End of the string.')
